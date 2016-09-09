@@ -1,6 +1,6 @@
 import atexit, mdk, requests, traceback, logging
 
-from flask import g, request, request_started, got_request_exception, request_tearing_down
+from flask import request, request_started, got_request_exception, request_tearing_down
 
 # Python logging handler that vectors logs off to MDK.
 class MDKLogHandler(logging.StreamHandler):
@@ -27,22 +27,18 @@ class MDKLogHandler(logging.StreamHandler):
             # ...then grab the level of this record...
             level = self._fix_level(record.levelname)
 
-            # ...the MDK default session and category...
+            # Start by grabbing the default MDK session and category from the app...
             ssn = self.app.mdk_default_session
             category = self.app.mdk_default_category
 
-            # ...and, hopefully, the session and category for this specific request.
-            try:            
-                ssn = g.mdk_ssn
-            except AttributeError:
-                pass
+            # ...but if we have a request, use the finer-grained stuff in the request
+            # instead.
 
-            try:
-                category = g.mdk_category
-            except AttributeError:
-                pass
+            if request:
+                ssn = request.mdk_ssn
+                category = request.mdk_category
 
-            # OK. Make sure the session log level matches what we're asking for...
+            # Once that's done, make sure the session log level matches what we're asking for...
             ssn.trace(self.log_level)
 
             # ...and off we go.
@@ -53,18 +49,15 @@ class MDKLogHandler(logging.StreamHandler):
 
 def on_request_started(sender, **extra):
     # Create a new MDK session at request start.
-    request.ssn = sender.mdk.join(request.headers.get(sender.mdk.CONTEXT_HEADER))
-    # g.mdk_ssn = request.ssn
-    # g.mdk_category = app.mdk_default_category
+    request.mdk_ssn = sender.mdk.join(request.headers.get(sender.mdk.CONTEXT_HEADER))
+    request.mdk_category = sender.mdk_default_category
 
 def on_request_exception(sender, **extra):
     exc = extra.get("exception", None)
-    request.ssn.fail_interaction(traceback.format_exc(exc))
-    g.mdk_ssn = None
+    request.mdk_ssn.fail_interaction(traceback.format_exc(exc))
 
 def on_request_tearing_down(sender, **extra):
-    request.ssn.finish_interaction()
-    g.mdk_ssn = None
+    request.mdk_ssn.finish_interaction()
 
 def mdk_setup(app, category=None, logger=None):
     app.mdk = mdk.start()
@@ -86,4 +79,4 @@ def mdk_logger(app, default_category, logger=None):
     logger.addHandler(MDKLogHandler(app, logger.level))
 
 def mdk_category(category):
-    g.mdk_category = category
+    request.mdk_category = category
