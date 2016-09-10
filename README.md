@@ -16,3 +16,16 @@ To run the example, you'll probably want to use a virtualenv. After setting that
 - python monolith.py
 
 and stand back! Logs from the monolith should appear in the Logs tag of Mission Control.
+
+mdk_log_crunch.py
+-----------------
+
+This is a simple example of using lower-level MDK routines to do simple log analysis.
+
+To run the example, you'll need your `DATAWIRE_TOKEN` set as above, then
+
+- pip install datawire_mdk
+- python mdk_log_crunch.py
+
+You should see summaries of log traces appear in real time, a few seconds after the trace
+ends.
