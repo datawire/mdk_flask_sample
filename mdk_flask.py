@@ -22,6 +22,9 @@ class MDKLogHandler(logging.StreamHandler):
 
     # Emit a log record.
     def emit(self, record):
+        if record.pathname.find("quark_runtime") >= 0:
+            return
+
         # Switch into app context so that we can see e.g. global per-thread state...
         with self.app.app_context():
             # ...then grab the level of this record...
