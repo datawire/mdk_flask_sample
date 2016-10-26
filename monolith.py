@@ -1,38 +1,50 @@
+import sys
+
 import logging
 
-from flask import Flask, request
+from flask import Flask
+from mdk.flask import mdk_setup, MDKLoggingHandler
 
-from mdk_flask import mdk_setup, mdk_category
+# Initialize Python logging first. We need to set the name of the logger,
+# so logging.basicConfig won't cut it.
 
-# Initialize Python logging first...
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("monolith")
+logger.setLevel(logging.INFO)                           # Log INFO and higher
+logger.addHandler(logging.StreamHandler(sys.stdout))    # Always log to stdout
 
 # ...then get a Flask app going...
 app = Flask(__name__)
 
-# ...then link MDK logging into it, using the default category "monolith" and
-# the root logger as our base logger.
-mdk_setup(app, "monolith")
-
-# Simple Flask-route stuff.
+# ...with two routes. This is all basic Flask stuff.
 @app.route("/")
 @app.route("/<path>")
 def monolith(path="Pathless"):
     # This is a Python log that'll be vectored both to stdout (by the root
     # logger) and to MDK logging (by the handler installed by mdk_setup)
-    logging.info("got a request for: %s" % path)
+    logger.info("got a request for: %s" % path)
 
     return ("Got path %s" % path, 200)
 
 @app.route("/new/<thing>")
 def new_service(thing):
-    # Switch to using 'new-thing' as the MDK logging category..
-    mdk_category("new-thing")
+    # Use a sublogger here, to switch to a new category. Since this is a
+    # child of the "monolith" logger, it inherits its configuration...
+    logger = logging.getLogger("monolith.new-thing")
 
-    # ...and, again, log to both places at once.
-    logging.debug("switching to new-thing")
-    logging.info("got a request for a new: %s" % thing)
+    # ...so this should still log to both places at once.
+    logger.debug("switching to new-thing")
+    logger.info("got a request for a new: %s" % thing)
 
     return ("New thing %s" % path, 200)
 
-app.run()
+if __name__ == "__main__":
+    # OK. Fire up the MDK...
+    mdk = mdk_setup(app)
+
+    # ...and link the MDK's logging into Python logging.
+    handler = MDKLoggingHandler(mdk)
+    logger.addHandler(handler)
+
+    # Finally, start the server running.
+    logger.info("And we're off!!!")
+    app.run(port=7070)
