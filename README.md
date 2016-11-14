@@ -10,7 +10,7 @@ To use it, you'll need a Datawire account and its token:
 - get your Datawire Token using the "Copy Token" button in the left sidebar
 - set DATAWIRE_TOKEN in your environment
 
-To run the example, you'll probably want to use a virtualenv. After setting that up:
+To run the example, you'll probably want to use a virtualenv, and you'll definitely need datawire_mdk 2.0.33. After setting that up:
 
 - pip install datawire_mdk flask blinker
 - python monolith.py

@@ -2,7 +2,7 @@ import sys
 
 import logging
 
-from flask import Flask
+from flask import Flask, g
 from mdk.flask import mdk_setup, MDKLoggingHandler
 
 # Initialize Python logging first. We need to set the name of the logger,
@@ -12,6 +12,24 @@ logger = logging.getLogger("monolith")
 logger.setLevel(logging.INFO)                           # Log INFO and higher
 logger.addHandler(logging.StreamHandler(sys.stdout))    # Always log to stdout
 
+class CustomHandler(logging.StreamHandler):
+    """Hand log messages to an MDK Session and then to another logging system."""
+
+    def __init__(self, mdk):
+        """
+        :param mdk: A ``mdk.MDK`` instance.
+        """
+        logging.StreamHandler.__init__(self)
+        self._wrapped_handler = MDKLoggingHandler(mdk)
+
+    def emit(self, record):
+        # log to MDK:
+        logged_as = self._wrapped_handler.emit(record)
+        # you can now use the result in your own logging, e.g. output to stdout:
+        formatted = self.format(record)
+        print("LOGGED %s - %s: %s" % (logged_as.traceId, logged_as.causalLevel,
+                                      formatted))
+                                      
 # ...then get a Flask app going...
 app = Flask(__name__)
 
@@ -42,7 +60,8 @@ if __name__ == "__main__":
     mdk = mdk_setup(app)
 
     # ...and link the MDK's logging into Python logging.
-    handler = MDKLoggingHandler(mdk)
+    # handler = MDKLoggingHandler(mdk)
+    handler = CustomHandler(mdk) 
     logger.addHandler(handler)
 
     # Finally, start the server running.
